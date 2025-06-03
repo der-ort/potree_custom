@@ -5,7 +5,7 @@
 	<meta name="description" content="">
 	<meta name="author" content="">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-	<title>Potree Viewer</title>
+	<title>smart & agile viewer</title>
 
 	<!-- External Dependencies -->
 	<link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
@@ -20,7 +20,7 @@
 	   =================================================================== */
 	:root {
 		/* Typography */
-		--font-family: 'Barlow' ,'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		--font-family: 'Barlow' ,'Inter', sans-serif;
 		--font-size-xs: 11pt;
 		--font-size-sm: 13pt;
 		--font-size-base: 14pt;
@@ -151,11 +151,15 @@
 		z-index: 10000;
 		top: var(--space-xl);
 		right: var(--space-xl);
+		max-width: calc(100vw - 40px);
 		
 		/* Layout */
 		display: flex;
 		align-items: center;
 		gap: var(--space-sm);
+		flex-wrap: nowrap;
+		flex-shrink: 0;
+
 		
 		/* Visual */
 		background: var(--color-background);
@@ -353,6 +357,7 @@
 		/* Spacing */
 		padding: var(--space-xs) var(--space-sm);
 		min-width: 64px;
+		max-width: 96px;
 		text-align: center;
 	}
 
@@ -543,21 +548,22 @@
 		// Configure viewer settings
 		viewer.setEDLEnabled(false);
 		viewer.setFOV(60);
-		viewer.setPointBudget(1_000_000);
+		viewer.setPointBudget(3_000_000);
 		viewer.loadSettingsFromURL();
-		viewer.setBackground("skybox");
+		viewer.setBackground("black");
 		
 		// Load GUI components
 		viewer.loadGUI(() => {
-			viewer.setLanguage('en');
+			viewer.setLanguage('de');
 			$("#menu_tools").next().show();
 		});
 
 		// Define elevation range for point cloud
-		const elevationRange = [730, 790];
+		// TODO: Calculate from Input coordinates (take max and min height of point cloud.)
+		const elevationRange = [30, 80];
 		
 		// Load and configure point cloud
-		Potree.loadPointCloud("../pointclouds/vol_total/cloud.js", "Sorvilier", e => {
+		Potree.loadPointCloud("../pointclouds/tersteegen/metadata.json", "Tersteegenstrasse", e => {
 			const scene = viewer.scene;
 			const pointcloud = e.pointcloud;
 			
@@ -571,8 +577,8 @@
 			// Add to scene and set camera view
 			scene.addPointCloud(pointcloud);
 			scene.view.setView(
-				[590144.208, 231895.191, 1077.020],
-				[589800.000, 231432.852, 756.242],
+				[-56.8, -33.177, 31.0812],
+				[42.902, 62.619, 75.148],
 			);
 		});
 	</script>
@@ -635,13 +641,21 @@
 		});
 
 		// ===============================================
-		// TOOLBAR HTML GENERATION
+		// TOOLBAR HTML
 		// ===============================================
 		
 		const elToolbar = $("#potree_toolbar");
 		
 		// Build the toolbar structure with all sections
 		elToolbar.append(`
+			<!-- LOGO Section -->
+			<div class="toolbar-section" padding-left="36px" padding-right="36px">
+				<a href="http://smart-and-agile.de" target="_blank"><img width="48px"src="../resources/SmA/reiner.png"></a> 
+			</div>
+
+			<div class="toolbar-separator"></div>
+
+
 			<!-- Attribute Control Section -->
 			<div class="toolbar-section">
 				<div class="toolbar-label">View</div>
@@ -665,18 +679,21 @@
 				<div class="toolbar-controls" id="gradient-container">
 				</div>
 			</div>
+			
+
+			<div class="toolbar-separator"></div>
+
+			-->
+			<!-- VIEWS Tools Section 
+			<div class="toolbar-section">
+				<div class="toolbar-label">VIEWS</div>
+				<div class="toolbar-controls" id="viewscontrol_sma">	</div>		
+			</div>
 			-->
 
 			<div class="toolbar-section">
 				<div class="toolbar-label">NAVIGATION</div>
-				<div class="toolbar-controls" id="navigation_sma">			
-			</div>
-
-			<div class="toolbar-separator"></div>
-
-			<div class="toolbar-section">
-				<div class="toolbar-label">VIEWS</div>
-				<div class="toolbar-controls" id="viewscontrol_sma">			
+				<div class="toolbar-controls" id="navigation_sma">	</div>	
 			</div>
 
 			<div class="toolbar-separator"></div>
@@ -692,6 +709,10 @@
 					<div class="action-btn" data-action="measure-distance" title="Measure distance">
 						<img src="${Potree.resourcePath}/icons/distance.svg" alt="Distance"/>
 						<div class="tooltip">Distance</div>
+					</div>
+					<div class="action-btn" data-action="measure-height" title="Measure height">
+						<img src="${Potree.resourcePath}/icons/height.svg" alt="Height"/>
+						<div class="tooltip">Height</div>
 					</div>
 					<div class="action-btn" data-action="measure-circle" title="Measure circle">
 						<img src="${Potree.resourcePath}/icons/circle.svg" alt="Circle"/>
@@ -853,6 +874,23 @@
 			});
 		});
 
+		 /**
+		 * Handles height measurement tool activation
+		 */
+		 elToolbar.find('.action-btn[data-action="measure-height"]').click(function() {
+			elToolbar.find('.action-btn[data-action^="measure-"]').removeClass('active');
+			$(this).addClass('active');
+			
+			viewer.measuringTool.startInsertion({
+				showHeight: true,
+				showDistances: false,
+				showArea: false,
+				closed: false,
+				maxMarkers: 2,
+				name: 'Height'
+			});
+		});
+
 		/**
 		 * Handles circle measurement tool activation
 		 */
@@ -904,7 +942,7 @@
 		$('#sldPointBudget').slider({
 			value: viewer.getPointBudget(),
 			min: 100_000,
-			max: 1_000_000,
+			max: 10_000_000,
 			step: 1_000, // Much smaller steps for smoother movement
 			slide: (event, ui) => { 
 				viewer.setPointBudget(ui.value); 
